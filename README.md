@@ -1,6 +1,8 @@
 # Translatilla
 Translatilla is a (experimental) Gorilla Tag mod that heavily modifies [Utilla](https://github.com/sirkingbinx/Utilla) and [GorillaLibrary](https://github.com/GorillaTagModdingHub/GorillaLibrary) at runtime to get them to work together to implement modded lobby support.
 
+<img src="translatilla.png" width="90%">
+
 ## Installation
 > [!NOTE]
 > At the time of writing this (8/30/26) there is no release of the mod avaliable yet. The setup steps are here so I don't have to write them later.
