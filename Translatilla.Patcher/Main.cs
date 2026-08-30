@@ -1,0 +1,49 @@
+﻿using BepInEx.Logging;
+using Mono.Cecil;
+using System.Linq;
+
+namespace Translatilla.Patcher;
+
+/*
+ * What this does:
+ * 
+ * GorillaLibrary declares Utilla as an incompatability and refuses to load it at all. This will strip that
+ * incompatability attribute from all types in the assembly for both Utilla and GorillaLibrary since
+ * Translatilla forces them to load together.
+ * 
+ * Only removing the incompatability instead of mimicking all of the class names allows multiple things
+ * to keep flowing smoothly on both:
+ * 
+ * - Non-modded calls: You can still access GorillaLibrary's other features if your master library is
+ *                     Utilla.
+ * - Assembly loading: Assemblies that check to make sure that GorillaLibrary's GUID is loaded still
+ *                     operate as normal.
+ * - Smaller footprint: The removed extra bloatware make Translatilla easier to maintain.
+ */
+
+public static class Main
+{
+    public static readonly string[] AssemblyNames = [ "Utilla", "GorillaLibrary" ];
+    public static readonly ManualLogSource LogSource = Logger.CreateLogSource("Translatilla.Patcher");
+
+    public static void Patch(AssemblyDefinition assembly)
+    {
+        if (!AssemblyNames.Contains(assembly.Name.Name))
+            return;
+
+        var mainModule = assembly.MainModule;
+
+        foreach (var type in mainModule.Types)
+        {
+            var attributesToRemove = type.CustomAttributes
+                .Where(attr => attr.AttributeType.FullName == "BepInEx.BepInDependency")
+                .ToList();
+
+            foreach (var attr in attributesToRemove)
+            {
+                type.CustomAttributes.Remove(attr);
+                LogSource.LogInfo($"Removed incompatability: {attr.AttributeType.Name} from {type.FullName}");
+            }
+        }
+    }
+}
