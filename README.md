@@ -4,9 +4,6 @@ Translatilla is a (experimental) Gorilla Tag mod that heavily modifies [Utilla](
 <img src="translatilla.png" width="90%">
 
 ## Installation
-> [!NOTE]
-> At the time of writing this (8/30/26) there is no release of the mod avaliable yet. The setup steps are here so I don't have to write them later.
-
 - Go to the [latest release](https://github.com/sirkingbinx/Translatilla/releases/latest) and download `Translatilla.zip`
 - Extract the .zip file into your Gorilla Tag folder (that holds `Gorilla Tag.exe`).
 - Launch the game with both Utilla and GorillaLibrary installed
