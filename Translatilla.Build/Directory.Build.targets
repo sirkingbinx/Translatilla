@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project>
+    <Target Name="CreateZip" AfterTargets="Build">
+		<Copy SourceFiles="..\Build\Translatilla.Patcher.dll" DestinationFiles="..\Build\translatilla_tmp\BepInEx\patchers\Translatilla.Patcher.dll"/>
+		<Copy SourceFiles="..\Build\Translatilla.Plugin.dll" DestinationFiles="..\Build\translatilla_tmp\BepInEx\plugins\Translatilla.Plugin.dll"/>
+
+		<ZipDirectory
+			SourceDirectory="..\Build\translatilla_tmp"
+			DestinationFile="..\Build\Translatilla.zip"
+			Overwrite="true" />
+
+		<RemoveDir Directories="..\Build\translatilla_tmp\" />
+		
+		<Message Text="Built Translatilla.zip" Importance="high"/>
+	</Target>
+</Project>

@@ -1,0 +1,9 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+	  <TargetFramework>net472</TargetFramework>
+	</PropertyGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\Translatilla.Patcher\Translatilla.Patcher.csproj" />
+	  <ProjectReference Include="..\Translatilla.Plugin\Translatilla.Plugin.csproj" />
+	</ItemGroup>
+</Project>
