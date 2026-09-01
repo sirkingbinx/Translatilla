@@ -1,5 +1,9 @@
 ﻿using BepInEx.Logging;
+using GorillaLibrary.Behaviours;
+using GorillaLibrary.Models;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Utilla;
 using Utilla.Behaviours;
 using Utilla.Models;
@@ -33,6 +37,12 @@ public static class UtillaPatches
         PatchManager.ApplyPatch(
             typeof(Utilla.Utils.GameModeUtils), nameof(Utilla.Utils.GameModeUtils.GetGamemode),
             prefix: PatchManager.GetMethodInfo(GetGamemodePrefix)
+        );
+
+        // Killing the GamemodeManager since there is no need for its modded functionality under GL.
+        PatchManager.ApplyPatch(
+            typeof(GamemodeManager), nameof(GamemodeManager.Awake),
+            prefix: PatchManager.GetMethodInfo(GamemodeManagerAwakePatch)
         );
     }
 
@@ -89,4 +99,71 @@ public static class UtillaPatches
 
         return false;
     }
+
+    // Utilla/Behaviours/GamemodeManager.cs
+    static bool GamemodeManagerAwakePatch(GamemodeManager __instance)
+    {
+        GamemodeManager.Instance = __instance;
+
+        Events.RoomJoined += __instance.OnRoomJoin;
+        Events.RoomLeft += __instance.OnRoomLeft;
+
+        // Translating Custom Game Modes
+        /*
+         * Under the hood, GL's modded lobby management is just Utilla's GamemodeManager so the process of feeding
+         * custom gamemodes into GL is the exact same as it would be for Utilla.
+         * 
+         * All we have to do is translate the types from Utilla.Example.Type to GorillaLibrary.Example.Type since
+         * .NET doesn't allow for mixing and matching functionally the same type across two namespaces that define
+         * them.
+         * 
+         * Good news, it's stupid easy.
+         * Bad news, we have to do it at all.
+         */
+
+        // PluginInfo also happens to hold metadata for Utilla itself, but this shouldn't be much of an issue since we
+        // just ignore those values in reconstruction.
+
+        // Utilla conveniently has a helper function for getting our plugin infos
+        List<PluginInfo> utillaPluginInfos = __instance.GetPluginInfos();
+        List<GorillaLibrary.PluginInfo> gorillaLibraryPluginInfos = new();
+
+        foreach (var pluginInfo in utillaPluginInfos)
+        {
+            var glPluginInfo = new GorillaLibrary.PluginInfo
+            {
+                Gamemodes = pluginInfo.Gamemodes.Select(g => CreateGameModeWrapper(g)).ToArray(),
+                Plugin = pluginInfo.Plugin,
+                // None of the gamemode events take namespace-specific types, they take strings so no translation required
+                OnGamemodeJoin = pluginInfo.OnGamemodeJoin,
+                OnGamemodeLeave = pluginInfo.OnGamemodeLeave
+            };
+
+            gorillaLibraryPluginInfos.Add(glPluginInfo);
+        }
+
+        // Now just inject them into GorillaLibrary's gamemode mgr
+        var gamemodes = GameModeManager.Instance.GetGamemodes(gorillaLibraryPluginInfos);
+        gamemodes.ForEach(GameModeManager.Instance.AddGamemodeToPrefabPool);
+
+        Plugin.Logger.Log($"Added {gamemodes.Count} gamemodes to GorillaLibrary game selector");
+
+        // We don't need to kill the network controller since it's room update events are completely
+        // harmless and rely on NetworkSystem. It also updates GameModeUtils but mostly irrelevant since it's
+        // already patched.
+        // 
+        // Sorta redundant to let you know that the patches don't do something but felt like it'd be useful
+        // to mention since a name like "UtillaNetworkController" implies that it is controlling networking
+        // operations.
+
+        Plugin.Logger.LogMessage($"Utilla {UtillaInstance.Info.Metadata.Version} should be patched and ready to work with GorillaLibrary.");
+        Plugin.Logger.LogMessage($"If any crashes, bugs, or issues occur with either library, please fill out an issue on GitHub:");
+        Plugin.Logger.LogMessage($"https://github.com/sirkingbinx/Translatilla");
+
+        return false;
+    }
+
+    // Easy setup steps for GL. Just pass the arguments Utilla already created.
+    private static GameModeWrapper CreateGameModeWrapper(Gamemode utillaGamemode) =>
+        new GameModeWrapper(utillaGamemode.ID, utillaGamemode.DisplayName, utillaGamemode.GameManager);
 }

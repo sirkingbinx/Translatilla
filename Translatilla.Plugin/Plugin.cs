@@ -2,6 +2,7 @@ using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using System.Diagnostics;
 using UnityEngine;
 
 namespace Translatilla.Plugin;
@@ -24,7 +25,7 @@ public class Plugin : BaseUnityPlugin
         GorillaLibrary
     }
 
-    private void Awake()
+    private void Start()
     {
         Logger = base.Logger;
 
@@ -37,22 +38,42 @@ public class Plugin : BaseUnityPlugin
         var glInfo = Chainloader.PluginInfos["dev.gorillalibrary"].Metadata;
         var utInfo = Chainloader.PluginInfos["org.legoandmars.gorillatag.utilla"].Metadata;
 
+        // Just to be safe; patching versions we haven't looked at could be risky and trigger AC if done wrong
+        bool cancelPatch = false;
+
         if (glInfo.Version != Constants.GLVersion) {
             Logger.LogError("GorillaLibrary has not been patched for the latest version; initialization has been cancelled.");
             Logger.LogError($"GL patch version: {Constants.GLVersion} ; GL version: {glInfo.Version}");
-            return;
+            cancelPatch = true;
         }
 
         if (utInfo.Version != Constants.UtillaVersion) {
             Logger.LogError("Utilla has not been patched for the latest version; initialization has been cancelled.");
             Logger.LogError($"Utilla patch version: {Constants.UtillaVersion} ; Utilla version: {utInfo.Version}");
+            cancelPatch = true;
+        }
+        
+        if (cancelPatch)
+        {
+            Logger.LogError("Please create an issue on GitHub so we know that Utilla or GorillaLibrary has updated.");
+            Logger.LogError("https://github.com/sirkingbinx/Translatilla");
+
             return;
         }
 
         bool glMaster = masterLibrary.Value == MasterLibrary.GorillaLibrary;
         bool utMaster = masterLibrary.Value == MasterLibrary.Utilla;
 
+        Plugin.Logger.LogMessage($"Translatilla v{Info.Metadata.Version}");
+        Plugin.Logger.LogMessage($"Master Library: {masterLibrary.Value}");
+
+        var stopwatch = Stopwatch.StartNew();
+
         GorillaLibraryPatches.Apply(glMaster);
         UtillaPatches.Apply(utMaster);
+
+        stopwatch.Stop();
+
+        Plugin.Logger.LogMessage($"Patches complete in {stopwatch.ElapsedMilliseconds}ms");
     }
 }
