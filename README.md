@@ -5,6 +5,13 @@
 
 Translatilla is a (experimental) Gorilla Tag mod that heavily modifies [Utilla](https://github.com/sirkingbinx/Utilla) and [GorillaLibrary](https://github.com/GorillaTagModdingHub/GorillaLibrary) at runtime to get them to work together to implement modded lobby support.
 
+Utilla or GorillaLibrary is declared as a "master library". The master library is the library that handles modded lobby functionality, and calls from the other library are translated to your master library and back in order to force compatability between both libraries without any compromises.
+
+Translatilla requires little setup, just use the [Installation](#installation) steps and you get support for all of these features without any modification:
+- custom gamemodes
+- modded lobbies
+- miscellanous utilities from both mod loaders
+
 <img src=".github/stop_fighting.png" width="90%">
 
 ## Installation
