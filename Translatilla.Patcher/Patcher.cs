@@ -1,5 +1,5 @@
-﻿using BepInEx.Logging;
-using Mono.Cecil;
+﻿using Mono.Cecil;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Translatilla.Patcher;
@@ -21,16 +21,12 @@ namespace Translatilla.Patcher;
  * - Smaller footprint: The removed extra bloatware make Translatilla easier to maintain.
  */
 
-public static class Main
+public static class Patcher
 {
-    public static readonly string[] AssemblyNames = [ "Utilla", "GorillaLibrary" ];
-    public static readonly ManualLogSource LogSource = Logger.CreateLogSource("Translatilla.Patcher");
-
+    public static IEnumerable<string> TargetDLLs { get; } = new[] {"GorillaLibrary.dll", "Utilla.dll"};
+    
     public static void Patch(AssemblyDefinition assembly)
     {
-        if (!AssemblyNames.Contains(assembly.Name.Name))
-            return;
-
         var mainModule = assembly.MainModule;
 
         foreach (var type in mainModule.Types)
@@ -42,7 +38,6 @@ public static class Main
             foreach (var attr in attributesToRemove)
             {
                 type.CustomAttributes.Remove(attr);
-                LogSource.LogInfo($"Removed incompatability: {attr.AttributeType.Name} from {type.FullName}");
             }
         }
     }

@@ -31,7 +31,7 @@ public class Plugin : BaseUnityPlugin
 
         masterLibrary = Config.Bind(
             "Patching", "MasterLibrary",
-            MasterLibrary.Utilla,
+            MasterLibrary.GorillaLibrary,
             "The library that handles modded functions."
         );
 
