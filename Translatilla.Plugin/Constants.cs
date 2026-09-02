@@ -1,6 +1,6 @@
 using System;
 
-namespace Translatilla;
+namespace Translatilla.Plugin;
 
 public static class Constants
 {

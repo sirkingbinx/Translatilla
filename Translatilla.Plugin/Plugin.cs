@@ -3,6 +3,7 @@ using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using System.Diagnostics;
+using System.IO;
 using UnityEngine;
 
 namespace Translatilla.Plugin;
@@ -19,21 +20,32 @@ public class Plugin : BaseUnityPlugin
     public static GameObject UtillaGameObject = null!;
     public static GameObject GorillaLibraryGameObject = null!;
 
+    public static ConfigFile TranslatillaConfig = null!;
+
     public enum MasterLibrary
     {
         Utilla,
         GorillaLibrary
     }
 
-    private void Start()
+    /*
+     * We patch right before objects are initialized (which both libs work with, so thanks for that)
+     * This attrib tells Unity to run this function before the scene loads (which is when BepInEx, )
+     */
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    static void OnSceneLoaded()
     {
-        Logger = base.Logger;
+        TranslatillaConfig = new ConfigFile(Path.Combine(Paths.BepInExRootPath, "Translatilla.cfg"), true);
 
-        masterLibrary = Config.Bind(
+        masterLibrary = TranslatillaConfig.Bind(
             "Patching", "MasterLibrary",
             MasterLibrary.GorillaLibrary,
             "The library that handles modded functions."
         );
+
+        TranslatillaConfig.Save();
+
+        Logger = BepInEx.Logging.Logger.CreateLogSource("Translatilla");
 
         var glInfo = Chainloader.PluginInfos["dev.gorillalibrary"].Metadata;
         var utInfo = Chainloader.PluginInfos["org.legoandmars.gorillatag.utilla"].Metadata;
@@ -64,8 +76,7 @@ public class Plugin : BaseUnityPlugin
         bool glMaster = masterLibrary.Value == MasterLibrary.GorillaLibrary;
         bool utMaster = masterLibrary.Value == MasterLibrary.Utilla;
 
-        Plugin.Logger.LogMessage($"Translatilla v{Info.Metadata.Version}");
-        Plugin.Logger.LogMessage($"Master Library: {masterLibrary.Value}");
+        Logger.LogMessage($"Master library: {masterLibrary.Value}");
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -74,6 +85,6 @@ public class Plugin : BaseUnityPlugin
 
         stopwatch.Stop();
 
-        Plugin.Logger.LogMessage($"Patches complete in {stopwatch.ElapsedMilliseconds}ms");
+        Logger.LogMessage($"Patches complete in {stopwatch.ElapsedMilliseconds}ms");
     }
 }
