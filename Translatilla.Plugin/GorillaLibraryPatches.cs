@@ -1,6 +1,5 @@
 ﻿using BepInEx.Logging;
 using GorillaGameModes;
-using GorillaLibrary;
 using GorillaLibrary.Behaviours;
 using GorillaLibrary.Models;
 using GorillaLibrary.Patches;
@@ -22,6 +21,8 @@ public static class GorillaLibraryPatches
         // We leave it completely unpatched when it's the master library.
         if (isMasterLibrary)
             return;
+        
+        Harmony.UnpatchID("org.legoandmars.gorillatag.utilla");
 
         if (stopConductBoard)
         {

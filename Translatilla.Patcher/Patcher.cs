@@ -1,5 +1,8 @@
-﻿using Mono.Cecil;
+﻿using BepInEx;
+using Mono.Cecil;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace Translatilla.Patcher;
@@ -23,22 +26,39 @@ namespace Translatilla.Patcher;
 
 public static class Patcher
 {
-    public static IEnumerable<string> TargetDLLs { get; } = new[] {"GorillaLibrary.dll", "Utilla.dll"};
-    
-    public static void Patch(AssemblyDefinition assembly)
+    public static IEnumerable<string> TargetDLLs { get; } = new string[0];
+
+    public static void Initialize()
     {
-        var mainModule = assembly.MainModule;
-
-        foreach (var type in mainModule.Types)
+        string[] filePaths = Directory.GetFiles(Paths.PluginPath, "*.dll", SearchOption.AllDirectories);
+        foreach (string filepath in filePaths)
         {
-            var attributesToRemove = type.CustomAttributes
-                .Where(attr => attr.AttributeType.FullName == "BepInEx.BepInIncompatibility")
-                .ToList();
+            using var assembly = AssemblyDefinition.ReadAssembly(filepath, new ReaderParameters { ReadWrite = true });
 
-            foreach (var attr in attributesToRemove)
+            Console.WriteLine("Reading: " + assembly.Name.Name);
+
+            var mainModule = assembly.MainModule;
+
+            if (assembly.Name.Name != "GorillaLibrary")
+                continue;
+
+            Console.WriteLine("Patching: " + assembly.Name.Name);
+
+            foreach (var type in mainModule.Types)
             {
-                type.CustomAttributes.Remove(attr);
+                var attributesToRemove = type.CustomAttributes
+                    .Where(attr => attr.AttributeType.Name == "BepInIncompatibility")
+                    .ToList();
+                foreach (var attr in attributesToRemove)
+                {
+                    type.CustomAttributes.Remove(attr);
+                }
             }
+
+            assembly.Write();
         }
     }
+    
+    // Dummy method
+    public static void Patch(AssemblyDefinition assembly) { }
 }

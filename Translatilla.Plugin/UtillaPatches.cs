@@ -1,6 +1,7 @@
 ﻿using BepInEx.Logging;
 using GorillaLibrary.Behaviours;
 using GorillaLibrary.Models;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,16 +21,13 @@ public static class UtillaPatches
         if (isMasterLibrary)
             return;
 
+        Harmony.UnpatchID("org.legoandmars.gorillatag.utilla");
+
         if (stopConductBoard)
         {
             PatchManager.KillMethod(typeof(VersionCheckManager), nameof(VersionCheckManager.Start));
             PatchManager.KillMethod(typeof(VersionCheckManager), nameof(VersionCheckManager.CheckVersion));
         }
-
-        PatchManager.ApplyConstructorPatch(typeof(Utilla.Plugin),
-            prefix: PatchManager.StopExecution,
-            finalizer: PatchManager.GetMethodInfo(PluginConstructorFinalizer)
-        );
 
         // Surprisingly, this is the only patch we need to completely fix GameModeUtils to GL.
         // Basically all the helper funcs rely on GetGamemode() internally so just translating GL
