@@ -32,7 +32,7 @@ public static class Patcher
         foreach (var type in mainModule.Types)
         {
             var attributesToRemove = type.CustomAttributes
-                .Where(attr => attr.AttributeType.FullName == "BepInEx.BepInDependency")
+                .Where(attr => attr.AttributeType.FullName == "BepInEx.BepInIncompatibility")
                 .ToList();
 
             foreach (var attr in attributesToRemove)
