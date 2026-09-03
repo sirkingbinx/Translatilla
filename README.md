@@ -12,7 +12,21 @@ Translatilla requires little setup, just use the [Installation](#installation) s
 - modded lobbies
 - miscellanous utilities from both mod loaders
 
-<img src=".github/stop_fighting.png" width="90%">
+## Table of Contents
+
+<img align="right" width="400" src=".github/stop_fighting.png">
+
+- [Installation](#installation)
+- [Implementation & History](#implementation--history)
+    - [Why](#why)
+    - [How](#how)
+- [Build](#build)
+    - [CLI](#cli)
+    - [Visual Studio](#visual-studio)
+- [Configuration](#configuration)
+    - [Master Library](#master-library)
+
+<br clear="right"/>
 
 ## Installation
 - Go to the [latest release](https://github.com/sirkingbinx/Translatilla/releases/latest) and download `Translatilla.zip`
@@ -28,23 +42,30 @@ It left many modders and creators at a stopping point, forced to choose between 
 To avoid modifying Utilla or GorillaLibrary to keep all groups of the modding community happy, Translatilla steps in and does heavy modifications at runtime with Harmony and BepInEx patchers to force the two to work together.
 
 ### How
-In Translatilla's `bingus.translatilla.cfg` file, a "master library" is set (either Utilla or GorillaLibrary). The master library is in charge of providing modded lobby services (gamemode selectors, code of conduct board info, and lobby management). Calls to the non-master library are translated into methods for the master library, and then those return values are translated to the non-master library types required by a mod, hence the name **transla**tilla.
+In Translatilla's config file, a "master library" is set (either Utilla or GorillaLibrary). The master library is in charge of providing modded lobby services (gamemode selectors, code of conduct board info, and lobby management). Calls to the non-master library are translated into methods for the master library, and then those return values are translated to the non-master library types required by a mod, hence the name **transla**tilla.
 
 The perks of modifying modded lobby management means that any misc calls (eg. for GorillaLibrary's cosmetic utilities) are able to run as normal without breaking mods that rely on those methods.
 
-## For Developers
-### Support Translatilla
-You don't need to change anything in order to make Translatilla work. Translatilla does nothing to modify regular mods, it only changes GorillaLibrary and Utilla. Just use your chosen library like normal and Translatilla will do the rest.
-
-### How to tell if Translatilla is active
-Only check this for debugging purposes. Disabling your mod just because you know Translatilla is there isn't very friendly, meanie.
-```cs
-// GorillaLibrary mods
-// Note: Do not reference ConductBoardManager, there's a 50/50 chance it's disabled. Use one of these two if referencing by Behaviours: NetworkController, GameModeManager
-//       This also requires you to publicize GorillaLibrary.
-bool translatillaRunning = NetworkController.Instance.gameObject.name.Contains("GorillaLibrary/Translatilla");
-
-// Utilla mods
-// Note: This requires you to publicize Utilla.
-bool translatillaRunning = UtillaNetworkController.Instance.gameObject.name.Contains("Utilla/Translatilla");
+## Build
+### CLI
 ```
+git clone https://github.com/sirkingbinx/Translatilla
+cd Translatilla
+dotnet build # append "-C Release" to remove debug info
+```
+### Visual Studio
+Load the solution in Visual Studio, right click the Translatilla solution, and select "Build Solution".
+
+### Output
+You can find all of the build artifacts in the `/Build/` folder. Inside you find the following:
+- **Translatilla.zip**: Attached to every [release](https://github.com/sirkingbinx/translatilla/releases). Designed to be extracted directly into your BepInEx folder.
+- **Translatilla.Patcher.dll**: Goes to `$(GAMEPATH)\BepInEx\patchers\`. Removes the incompatability attribute from GorillaLibrary so it will load.
+- **Translatilla.Plugin.dll**: Goes to `$(GAMEPATH)\BepInEx\plugins\`. Patches Utilla and GorillaLibrary. This is where the bulk of the project is.
+
+## Configuration
+The configuration file is `$(GAMEPATH)\BepInEx\config\Translatilla.cfg`. You can open it with whatever you want, and it is formatted like any other BepInEx config file.
+
+### MasterLibrary
+> *Accepts: `GorillaLibrary`, `Utilla`*
+
+The library responsible for modded lobby management. Mods for the non-master library are translated during runtime to support the other mod loader.
