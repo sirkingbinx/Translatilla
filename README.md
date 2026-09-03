@@ -65,7 +65,7 @@ You can find all of the build artifacts in the `/Build/` folder. Inside you find
 ## Configuration
 The configuration file is `$(GAMEPATH)\BepInEx\config\Translatilla.cfg`. You can open it with whatever you want, and it is formatted like any other BepInEx config file.
 
-### MasterLibrary
+### Master Library
 > *Accepts: `GorillaLibrary`, `Utilla`*
 
 The library responsible for modded lobby management. Mods for the non-master library are translated during runtime to support the other mod loader.
