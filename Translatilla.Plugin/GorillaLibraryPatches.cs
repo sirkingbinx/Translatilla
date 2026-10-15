@@ -9,6 +9,7 @@ using Photon.Pun;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Utilla.Behaviours;
 
 namespace Translatilla.Plugin;
 
@@ -22,7 +23,7 @@ public static class GorillaLibraryPatches
         if (isMasterLibrary)
             return;
         
-        Harmony.UnpatchID("org.legoandmars.gorillatag.utilla");
+        Harmony.UnpatchID("dev.gorillalibrary");
 
         if (stopConductBoard)
         {
@@ -81,7 +82,7 @@ public static class GorillaLibraryPatches
         );
 
         PatchManager.ApplyPatch(
-            typeof(RigContainer), "OnDisable", // maybe exists???
+            typeof(RigContainer), nameof(RigContainer.OnDisable),
             postfix: PatchManager.GetMethodInfo(PostInitializedPatch.Postfix)
         );
 
@@ -90,6 +91,12 @@ public static class GorillaLibraryPatches
         PatchManager.ApplyPatch(
             typeof(GorillaLibrary.Utilities.GameModeUtility), nameof(GorillaLibrary.Utilities.GameModeUtility.GetGameMode),
             prefix: PatchManager.GetMethodInfo(GetGameModePrefix)
+        );
+
+        // Hook onto Utilla version checker
+        PatchManager.ApplyPatch(
+            typeof(VersionCheckManager), nameof(VersionCheckManager.Start),
+            postfix: PatchManager.GetMethodInfo(VersionCheckManagerStartPatch)
         );
     }
 
@@ -113,7 +120,7 @@ public static class GorillaLibraryPatches
 
         if (gtModeSerializeType != null)
         {
-            Harmony glibHarmony = new Harmony("translatilla.dev.gorillalibrary");
+            Harmony glibHarmony = new Harmony("translatilla." + __instance.Info.Metadata.GUID);
 
             // If it ain't broke don't reformat it
             glibHarmony.Patch(AccessTools.Method(gtModeSerializeType, "BroadcastTag", parameters: [typeof(NetPlayer), typeof(NetPlayer), typeof(PhotonMessageInfo)]), postfix: new(AccessTools.Method(typeof(GameManagerPatches), nameof(GameManagerPatches.ClientTagPatch))));
@@ -158,5 +165,10 @@ public static class GorillaLibraryPatches
         __result = glGamemode;
 
         return false;
+    }
+
+    static void VersionCheckManagerStartPatch(VersionCheckManager __instance)
+    {
+        __instance.footerText.text += $" <color=grey>/ Translatilla {PluginInfo.Version}</color>";
     }
 }

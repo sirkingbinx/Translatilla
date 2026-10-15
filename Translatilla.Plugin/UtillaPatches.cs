@@ -21,6 +21,7 @@ public static class UtillaPatches
         if (isMasterLibrary)
             return;
 
+        // If utilla already has patches, we remove them here
         Harmony.UnpatchID("org.legoandmars.gorillatag.utilla");
 
         if (stopConductBoard)
@@ -41,6 +42,12 @@ public static class UtillaPatches
         PatchManager.ApplyPatch(
             typeof(GamemodeManager), nameof(GamemodeManager.Awake),
             prefix: PatchManager.GetMethodInfo(GamemodeManagerAwakePatch)
+        );
+
+        // Hook onto GL version text
+        PatchManager.ApplyPatch(
+            typeof(ConductBoardManager), nameof(ConductBoardManager.Start),
+            postfix: PatchManager.GetMethodInfo(ConductBoardManagerStartPatch)
         );
     }
 
@@ -126,23 +133,34 @@ public static class UtillaPatches
         List<Utilla.PluginInfo> utillaPluginInfos = __instance.GetPluginInfos();
         List<GorillaLibrary.PluginInfo> gorillaLibraryPluginInfos = new();
 
+        List<GorillaLibrary.Models.GameModeWrapper> gamemodes = new();
+
+        // Get gamemodes via Utilla for conversion
         foreach (var pluginInfo in utillaPluginInfos)
         {
+            GameModeWrapper[] ourGamemodes = pluginInfo.Gamemodes.Select(g => CreateGameModeWrapper(g)).ToArray();
+            
             var glPluginInfo = new GorillaLibrary.PluginInfo
             {
-                Gamemodes = pluginInfo.Gamemodes.Select(g => CreateGameModeWrapper(g)).ToArray(),
+                Gamemodes = ourGamemodes,
                 Plugin = pluginInfo.Plugin,
                 // None of the gamemode events take namespace-specific types, they take strings so no translation required
                 OnGamemodeJoin = pluginInfo.OnGamemodeJoin,
                 OnGamemodeLeave = pluginInfo.OnGamemodeLeave
             };
 
+            gamemodes.AddRange(ourGamemodes);
             gorillaLibraryPluginInfos.Add(glPluginInfo);
         }
 
+        GameModeManager gmmInstance = GameModeManager.Instance;
+
         // Now just inject them into GorillaLibrary's gamemode mgr
-        var gamemodes = GameModeManager.Instance.GetGamemodes(gorillaLibraryPluginInfos);
-        gamemodes.ForEach(GameModeManager.Instance.AddGamemodeToPrefabPool);
+        gmmInstance.Gamemodes.AddRange(gamemodes);
+        gamemodes.ForEach(gmmInstance.AddGamemodeToPrefabPool);
+
+        // properly insert our pluginInfos just in case
+        GameModeManager.Instance.pluginInfos.AddRange(gorillaLibraryPluginInfos);
 
         Plugin.Logger.Log($"Added {gamemodes.Count} gamemodes to GorillaLibrary game selector");
 
@@ -159,6 +177,11 @@ public static class UtillaPatches
         Plugin.Logger.LogMessage($"https://github.com/sirkingbinx/Translatilla");
 
         return false;
+    }
+
+    static void ConductBoardManagerStartPatch(ConductBoardManager __instance)
+    {
+        __instance.footerText.text += $" <color=grey>/ Translatilla {PluginInfo.Version}</color>";
     }
 
     // Easy setup steps for GL. Just pass the arguments Utilla already created.
