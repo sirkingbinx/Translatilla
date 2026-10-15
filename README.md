@@ -12,6 +12,8 @@ Translatilla requires little setup, just use the [Installation](#installation) s
 - modded lobbies
 - miscellanous utilities from both mod loaders
 
+You can find releases for Translatilla on both [MonkeForge](https://monkeforge.org/view/translatilla) and on [GitHub](https://github.com/sirkingbinx/Translatilla/releases).
+
 ## Table of Contents
 
 <img align="right" width="400" src=".github/stop_fighting.png">
@@ -41,8 +43,10 @@ It left many modders and creators at a stopping point, forced to choose between 
 
 To avoid modifying Utilla or GorillaLibrary to keep all groups of the modding community happy, Translatilla steps in and does heavy modifications at runtime with Harmony and BepInEx patchers to force the two to work together.
 
+This benefits both communities - Gorilla Tag Modding Group can use some incredibly popular mods that rely on GorillaLibrary, and the Gorilla Tag Modding Hub can enjoy using an independent modding framework while still being backwards compatable with Utilla-based mods.
+
 ### How
-In Translatilla's config file, a "master library" is set (either Utilla or GorillaLibrary). The master library is in charge of providing modded lobby services (gamemode selectors, code of conduct board info, and lobby management). Calls to the non-master library are translated into methods for the master library, and then those return values are translated to the non-master library types required by a mod, hence the name **transla**tilla.
+In Translatilla's config file, a "master library" is set (either Utilla or GorillaLibrary). The master library is in charge of providing modded lobby services (gamemode selectors, code of conduct board info, and lobby management). Calls to the non-master library are translated into methods for the master library, and then those return values are translated to the non-master library types required by a mod, hence the name **transla**tilla (it's like a translator).
 
 The perks of modifying modded lobby management means that any misc calls (eg. for GorillaLibrary's cosmetic utilities) are able to run as normal without breaking mods that rely on those methods.
 
