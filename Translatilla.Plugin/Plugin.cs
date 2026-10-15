@@ -2,17 +2,15 @@ using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
-using HarmonyLib;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace Translatilla.Plugin;
 
-[BepInPlugin(Constants.Guid, Constants.Name, Constants.Version)]
+[BepInPlugin(PluginInfo.Guid, PluginInfo.Name, PluginInfo.Version)]
 [BepInDependency("org.legoandmars.gorillatag.utilla", BepInDependency.DependencyFlags.HardDependency)]
 [BepInDependency("dev.gorillalibrary", BepInDependency.DependencyFlags.HardDependency)]
 public class Plugin : BaseUnityPlugin
@@ -51,17 +49,17 @@ public class Plugin : BaseUnityPlugin
         // Just to be safe; patching versions we haven't looked at could be risky and trigger AC if done wrong
         bool cancelPatch = false;
 
-        if (glInfo.Version != Constants.GLVersion)
+        if (glInfo.Version != PluginInfo.GLVersion)
         {
             Logger.LogError("GorillaLibrary has not been patched for the latest version; initialization has been cancelled.");
-            Logger.LogError($"GL patch version: {Constants.GLVersion} ; GL version: {glInfo.Version}");
+            Logger.LogError($"GL patch version: {PluginInfo.GLVersion} ; GL version: {glInfo.Version}");
             cancelPatch = true;
         }
 
-        if (utInfo.Version != Constants.UtillaVersion)
+        if (utInfo.Version != PluginInfo.UtillaVersion)
         {
             Logger.LogError("Utilla has not been patched for the latest version; initialization has been cancelled.");
-            Logger.LogError($"Utilla patch version: {Constants.UtillaVersion} ; Utilla version: {utInfo.Version}");
+            Logger.LogError($"Utilla patch version: {PluginInfo.UtillaVersion} ; Utilla version: {utInfo.Version}");
             cancelPatch = true;
         }
 
@@ -88,64 +86,4 @@ public class Plugin : BaseUnityPlugin
 
         Logger.LogMessage($"Patches complete in {stopwatch.ElapsedMilliseconds}ms");
     }
-
-#if DEBUG
-    /**
-     * helpful Debug GUI for testing features
-     */
-
-    private bool showDebug = true;
-
-    private readonly Queue<string> logQueue = new Queue<string>();
-    private const int logMessageCount = 30;
-
-    private static Rect windowRect = new Rect(10, 10, 600, 500);
-
-    private static Vector2 logMessagesScrollPosition = Vector2.zero;
-
-    void HandleLogMessage(string logString, string stackTrace, LogType type)
-    {
-        logQueue.Enqueue($"[{type}] {logString}");
-
-        if (logQueue.Count > logMessageCount)
-            logQueue.Dequeue();
-    }
-
-
-    private void Start()
-    {
-        Application.logMessageReceived += HandleLogMessage;
-    }
-
-    private void Update()
-    {
-        if (Keyboard.current.f8Key.wasPressedThisFrame)
-            showDebug = !showDebug;
-    }
-
-    private void OnGUI()
-    {
-        if (!showDebug) return;
-        windowRect = GUI.Window(93, windowRect, DrawWindow, "Translatilla", GUI.skin.box);
-    }
-
-    private void DrawWindow(int _)
-    {
-        GUI.Label(new Rect(0, 0, windowRect.width, 20), $"Translatilla Debug {Constants.Version} [F8]");
-
-        // log messages
-        logMessagesScrollPosition = GUI.BeginScrollView(
-            new Rect(10, 30, windowRect.width - 20, 300),
-            logMessagesScrollPosition,
-            new Rect(0, 0, windowRect.width - 20, 16 * logMessageCount)
-        );
-
-        foreach (string logMessage in logQueue)
-            GUILayout.Label(logMessage, GUILayout.ExpandWidth(true));
-
-        GUI.EndScrollView(); 
-
-        GUI.DragWindow(new Rect(0, 0, windowRect.width, 20));
-    }
-#endif
 }

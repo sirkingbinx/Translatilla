@@ -123,7 +123,7 @@ public static class UtillaPatches
         // just ignore those values in reconstruction.
 
         // Utilla conveniently has a helper function for getting our plugin infos
-        List<PluginInfo> utillaPluginInfos = __instance.GetPluginInfos();
+        List<Utilla.PluginInfo> utillaPluginInfos = __instance.GetPluginInfos();
         List<GorillaLibrary.PluginInfo> gorillaLibraryPluginInfos = new();
 
         foreach (var pluginInfo in utillaPluginInfos)

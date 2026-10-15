@@ -103,8 +103,10 @@ public static class GorillaLibraryPatches
 
         RuntimeHelpers.RunClassConstructor(typeof(GorillaLibrary.Events).TypeHandle);
 
+/*
         MothershipClientApiUnity.OnMessageNotificationSocket += 
             (notif, _) => GorillaLibrary.Events.Server.OnMothershipMessageRecieved.Invoke(notif.Title, notif.Body);
+*/
 
         Assembly gtAssembly = typeof(GorillaGameManager).Assembly;
         Type gtModeSerializeType = gtAssembly.GetType("GameModeSerializer");

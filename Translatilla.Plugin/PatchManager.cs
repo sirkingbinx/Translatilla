@@ -6,7 +6,7 @@ namespace Translatilla.Plugin;
 
 public static class PatchManager
 {
-    public static readonly Harmony harmony = new Harmony(Constants.Guid);
+    public static readonly Harmony harmony = new Harmony(PluginInfo.Guid);
 
     public static bool ApplyPatch(Type classType, string methodName, Type[] argumentTypes = null!, MethodInfo prefix = null!, MethodInfo postfix = null!, MethodInfo finalizer = null!)
     {

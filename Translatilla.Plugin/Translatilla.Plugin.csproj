@@ -42,7 +42,7 @@
 
 	<!-- This item group automatically imports all game assemblies except for problematic ones-->
 	<ItemGroup>
-		<_GameDlls Include="$(GameAssemblyPath)\*.dll" Exclude="$(GameAssemblyPath)\mscorlib.dll;$(GameAssemblyPath)\System*.dll" />
+		<_GameDlls Include="$(GameAssemblyPath)\*.dll" Exclude="$(GameAssemblyPath)\mscorlib.dll;$(GameAssemblyPath)\System*.dll;$(GameAssemblyPath)\0Harmony20.dll;" />
 
 		<Reference Include="@(_GameDlls)">
 			<HintPath>%(Identity)</HintPath>
