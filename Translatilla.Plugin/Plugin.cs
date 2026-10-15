@@ -2,11 +2,9 @@ using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace Translatilla.Plugin;
 
@@ -16,6 +14,7 @@ namespace Translatilla.Plugin;
 public class Plugin : BaseUnityPlugin
 {
     internal static ConfigEntry<MasterLibrary> masterLibrary = null!;
+    internal static ConfigEntry<bool> allowUnsafePatching = null!;
 
     internal static new ManualLogSource Logger = null!;
 
@@ -41,6 +40,13 @@ public class Plugin : BaseUnityPlugin
             MasterLibrary.GorillaLibrary,
             "The library that handles modded functions."
         );
+
+        allowUnsafePatching = cfg.Bind(
+            "Patching", "AllowUnsafePatching",
+            false,
+            "Skips version checking for patched mods; this is not recommended to be enabled unless you know what you are doing."
+        );
+
         cfg.Save();
 
         var glInfo = Chainloader.PluginInfos["dev.gorillalibrary"].Metadata;
@@ -48,17 +54,18 @@ public class Plugin : BaseUnityPlugin
 
         // Just to be safe; patching versions we haven't looked at could be risky and trigger AC if done wrong
         bool cancelPatch = false;
+        string cancelledMsg = allowUnsafePatching.Value ? "" : " - initialization has been cancelled";
 
         if (glInfo.Version != PluginInfo.GLVersion)
         {
-            Logger.LogError("GorillaLibrary has not been patched for the latest version; initialization has been cancelled.");
+            Logger.LogError("GorillaLibrary has not been patched for the latest version" + cancelledMsg);
             Logger.LogError($"GL patch version: {PluginInfo.GLVersion} ; GL version: {glInfo.Version}");
             cancelPatch = true;
         }
 
         if (utInfo.Version != PluginInfo.UtillaVersion)
         {
-            Logger.LogError("Utilla has not been patched for the latest version; initialization has been cancelled.");
+            Logger.LogError("Utilla has not been patched for the latest version" + cancelledMsg);
             Logger.LogError($"Utilla patch version: {PluginInfo.UtillaVersion} ; Utilla version: {utInfo.Version}");
             cancelPatch = true;
         }
@@ -67,8 +74,9 @@ public class Plugin : BaseUnityPlugin
         {
             Logger.LogError("Please create an issue on GitHub so we know that Utilla or GorillaLibrary has updated.");
             Logger.LogError("https://github.com/sirkingbinx/Translatilla");
-
-            return;
+            
+            if (!allowUnsafePatching.Value)
+                return;
         }
 
         bool glMaster = masterLibrary.Value == MasterLibrary.GorillaLibrary;
@@ -84,6 +92,6 @@ public class Plugin : BaseUnityPlugin
 
         stopwatch.Stop();
 
-        Logger.LogMessage($"Patches complete in {stopwatch.ElapsedMilliseconds}ms");
+        Logger.LogInfo($"Patches complete in {stopwatch.ElapsedMilliseconds}ms");
     }
 }

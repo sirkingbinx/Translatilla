@@ -7,9 +7,12 @@ using GorillaNetworking;
 using HarmonyLib;
 using Photon.Pun;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Utilla.Behaviours;
+using Utilla.Models;
 
 namespace Translatilla.Plugin;
 
@@ -167,6 +170,70 @@ public static class GorillaLibraryPatches
         return false;
     }
 
+    // GorillaLibrary/Behaviours/GameModeManager.cs
+    static bool GameModeManagerAwakePatch(GameModeManager __instance)
+    {
+        // This is almost a 1:1 copy of the simularly named method in UtillaPatches.cs
+
+        GameModeManager.Instance = __instance;
+
+        // Translating game modes is simular to Utilla. They are the same codebase after all.
+        // Even both the gameobjects are named "Utilla Custom Game Modes"
+
+        // Utilla conveniently has a helper function for getting our plugin infos
+        List<GorillaLibrary.PluginInfo> gorillaLibraryPluginInfos = __instance.GetPluginInfos();
+        List<Utilla.PluginInfo> utillaPluginInfos = new();
+
+        List<Gamemode> gamemodes = new();
+
+        Gamemode CreateGameMode(GameModeWrapper glGamemode) =>
+            new Gamemode(glGamemode.ID, glGamemode.DisplayName, glGamemode.GameManager.GetType());
+
+        // Get gamemodes via GL for conversion
+        foreach (var pluginInfo in gorillaLibraryPluginInfos)
+        {
+            Gamemode[] ourGamemodes = pluginInfo.Gamemodes.Select(g => CreateGameMode(g)).ToArray();
+            
+            var utillaPluginInfo = new Utilla.PluginInfo
+            {
+                Gamemodes = ourGamemodes,
+                Plugin = pluginInfo.Plugin,
+                // None of the gamemode events take namespace-specific types, they take strings so no translation required
+                OnGamemodeJoin = pluginInfo.OnGamemodeJoin,
+                OnGamemodeLeave = pluginInfo.OnGamemodeLeave
+            };
+
+            gamemodes.AddRange(ourGamemodes);
+            utillaPluginInfos.Add(utillaPluginInfo);
+        }
+
+        GamemodeManager gmmInstance = GamemodeManager.Instance;
+
+        // Now just inject them into Utilla's gamemode mgr
+        gmmInstance.Gamemodes.AddRange(gamemodes);
+        gamemodes.ForEach(gmmInstance.AddGamemodeToPrefabPool);
+
+        // properly insert our pluginInfos just in case
+        gmmInstance.pluginInfos.AddRange(utillaPluginInfos);
+
+        Plugin.Logger.Log($"Added {gamemodes.Count} gamemodes to Utilla game selector");
+
+        // We don't need to kill the network controller since it's room update events are completely
+        // harmless and rely on NetworkSystem. It also updates GameModeUtils but mostly irrelevant since it's
+        // already patched.
+        // 
+        // Sorta redundant to let you know that the patches don't do something but felt like it'd be useful
+        // to mention since a name like "UtillaNetworkController" implies that it is controlling networking
+        // operations.
+
+        Plugin.Logger.LogMessage($"GorillaLibrary {GLInstance.Info.Metadata.Version} should be patched and ready to work with Utilla.");
+        Plugin.Logger.LogMessage($"If any crashes, bugs, or issues occur with either library, please fill out an issue on GitHub:");
+        Plugin.Logger.LogMessage($"https://github.com/sirkingbinx/Translatilla");
+
+        return false;
+    }
+
+    // GorillaLibrary/Behaviours/ConductBoardManager.cs
     static void VersionCheckManagerStartPatch(VersionCheckManager __instance)
     {
         __instance.footerText.text += $" <color=grey>/ Translatilla {PluginInfo.Version}</color>";

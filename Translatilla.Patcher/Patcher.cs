@@ -35,14 +35,14 @@ public static class Patcher
         {
             using var assembly = AssemblyDefinition.ReadAssembly(filepath, new ReaderParameters { ReadWrite = true });
 
-            Console.WriteLine("Reading: " + assembly.Name.Name);
-
             var mainModule = assembly.MainModule;
 
-            if (assembly.Name.Name != "GorillaLibrary")
+            string[] allowedToPatch = { "GorillaLibrary", "Utilla" };
+
+            if (!allowedToPatch.Contains(assembly.Name.Name))
                 continue;
 
-            Console.WriteLine("Patching: " + assembly.Name.Name);
+            Console.WriteLine("[Translatilla.Patcher] Patching " + assembly.Name.Name);
 
             foreach (var type in mainModule.Types)
             {
@@ -59,6 +59,6 @@ public static class Patcher
         }
     }
     
-    // Dummy method
+    // Dummy method, we don't patch like this
     public static void Patch(AssemblyDefinition assembly) { }
 }
