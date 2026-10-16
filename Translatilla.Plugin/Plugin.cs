@@ -2,9 +2,12 @@ using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Translatilla.Plugin;
 
@@ -37,7 +40,7 @@ public class Plugin : BaseUnityPlugin
 
         masterLibrary = cfg.Bind(
             "Patching", "MasterLibrary",
-            MasterLibrary.GorillaLibrary,
+            MasterLibrary.Utilla,
             "The library that handles modded functions."
         );
 

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Project>
     <PropertyGroup>
-        <GamePath Condition="'$(GamePath)'==''">C:\Program Files (x86)\Steam\steamapps\common\Gorilla Tag</GamePath>
-
+		<GamePath Condition="'$(GamePath)'==''">C:\Program Files (x86)\Steam\steamapps\common\Gorilla Tag</GamePath>
         <DependenciesPath Condition="'$(DependenciesPath)'==''">$(MSBuildThisFileDirectory)..\Build\Dependencies</DependenciesPath>
-        <CI Condition="'$(CI)'=='' and Exists('$(MSBuildThisFileDirectory)..\Libs')">TRUE</CI>
+        
+		<CI Condition="'$(CI)'=='' and Exists('$(MSBuildThisFileDirectory)..\Libs')">TRUE</CI>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(CI)'=='TRUE'">

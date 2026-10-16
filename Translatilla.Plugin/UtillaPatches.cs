@@ -136,6 +136,9 @@ public static class UtillaPatches
         if (__instance.footerText == null)
             return;
 
-        __instance.footerText.text += $" <color=grey>/ Translatilla {PluginInfo.Version}</color>";
+        if (__instance.footerText.text.Contains("<color=red>"))
+            __instance.footerText.text += $"<color=red>TRANSLATILLA {PluginInfo.Version}</color> <color=grey>(U:{PluginInfo.UtillaVersion} / GL:{PluginInfo.GLVersion})</color>";
+        else
+            __instance.footerText.text += $"TRANSLATILLA {PluginInfo.Version} <color=grey>(U:{PluginInfo.UtillaVersion} / GL:{PluginInfo.GLVersion})</color>";
     }
 }
