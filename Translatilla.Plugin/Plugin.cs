@@ -86,7 +86,6 @@ public class Plugin : BaseUnityPlugin
 
         stopwatch = Stopwatch.StartNew();
 
-        // stop either of the two from patching themselves (we will do it for you)
         GorillaLibraryPatches.Apply(glMaster);
         UtillaPatches.Apply(utMaster);
 

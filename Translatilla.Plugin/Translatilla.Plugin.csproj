@@ -9,15 +9,12 @@
 		<!-- Allow variables to be null, which may help you write better code -->
 		<Nullable>enable</Nullable>
 
-		<!-- Include information about what functions are called to make debugging easier. -->
-		<!-- Build the mod in "Release" configuration to disable this (recommended).-->
 		<DebugType Condition="'$(Configuration)'=='Debug'">embedded</DebugType>
 
 		<NoWarn>MSB3270</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- Allows us to use all of the functions Gorilla Tag offers. -->
 		<PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

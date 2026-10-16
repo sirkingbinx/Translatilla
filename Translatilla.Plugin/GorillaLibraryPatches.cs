@@ -1,18 +1,10 @@
-﻿using BepInEx.Logging;
-using GorillaGameModes;
+using BepInEx.Bootstrap;
 using GorillaLibrary.Behaviours;
 using GorillaLibrary.Models;
-using GorillaLibrary.Patches;
-using GorillaNetworking;
-using HarmonyLib;
-using Photon.Pun;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using Utilla.Behaviours;
-using Utilla.Models;
 
 namespace Translatilla.Plugin;
 
@@ -22,11 +14,15 @@ public static class GorillaLibraryPatches
 
     public static void Apply(bool isMasterLibrary, bool stopConductBoard = true)
     {
-        // We leave it completely unpatched when it's the master library.
+        GLInstance = (GorillaLibrary.Plugin)Chainloader.PluginInfos["dev.gorillalibrary"].Instance;
+
+        PatchManager.ApplyPatch(typeof(NetworkController), nameof(NetworkController.OnRoomPropertiesUpdate),
+            prefix: PatchManager.GetMethodInfo(OnRoomPropertiesUpdatePrefix));
+
         if (isMasterLibrary)
             return;
-        
-        Harmony.UnpatchID("dev.gorillalibrary");
+
+        PatchManager.RemoveLobbyPatches(typeof(GorillaLibrary.Plugin).Assembly);
 
         if (stopConductBoard)
         {
@@ -35,207 +31,116 @@ public static class GorillaLibraryPatches
             PatchManager.KillMethod(typeof(ConductBoardManager), nameof(ConductBoardManager.DownloadEntries));
         }
 
-        PatchManager.ApplyPatch(
-            typeof(GorillaLibrary.Plugin), nameof(GorillaLibrary.Plugin.Awake),
-            prefix: PatchManager.GetMethodInfo(AwakePrefix)
-        );
-
-        PatchManager.ApplyPatch(
-            typeof(GorillaLibrary.Plugin), nameof(GorillaLibrary.Plugin.OnGameInitialized),
-            finalizer: PatchManager.GetMethodInfo(OnGameInitializedFinalizer)
-        );
-
-        /*
-         * Unlike Utilla, GL does more than just modded libs so we still apply some of the patches manually to make sure that
-         * the other features still operate independently.
-         */
-
-        // GorillaLibrary/Patches/CosmeticControllerPatch.cs
-        PatchManager.ApplyPatch(
-            typeof(CosmeticsController), nameof(CosmeticsController.UpdateWornCosmetics),
-            postfix: PatchManager.GetMethodInfo((bool sync, bool playfx) => CosmeticControllerPatch.WornCosmeticsUpdatePatch())
-        );
-
-        // GorillaLibrary/Patches/GameManagerPatches.cs
-        PatchManager.ApplyPatch(
-            typeof(GameMode), nameof(GameMode.BroadcastTag),
-            postfix: PatchManager.GetMethodInfo(GameManagerPatches.MasterTagPatch)
-        );
-
-        PatchManager.ApplyPatch(
-            typeof(GameMode), nameof(GameMode.BroadcastRoundComplete),
-            postfix: PatchManager.GetMethodInfo(GameManagerPatches.MasterRoundCompletePatch)
-        );
-
-        PatchManager.ApplyPatch(
-            typeof(GameMode), nameof(GameMode.BroadcastRoundComplete),
-            postfix: PatchManager.GetMethodInfo(GameManagerPatches.MasterRoundCompletePatch)
-        );
-
-        // GorillaLibrary/Patches/PostInitializedPatch.cs
-        PatchManager.ApplyPatch(
-            typeof(GorillaTagger), "Start",
-            postfix: PatchManager.GetMethodInfo(PostInitializedPatch.Postfix)
-        );
-
-        // GorillaLibrary/Patches/RigContainerPatches.cs
-        PatchManager.ApplyPatch(
-            PatchManager.GetSetter(typeof(RigContainer), nameof(RigContainer.Creator)),
-            postfix: PatchManager.GetMethodInfo(PostInitializedPatch.Postfix)
-        );
-
-        PatchManager.ApplyPatch(
-            typeof(RigContainer), nameof(RigContainer.OnDisable),
-            postfix: PatchManager.GetMethodInfo(PostInitializedPatch.Postfix)
-        );
-
-        // GorillaLibrary/Utilities/GameModeUtility.cs
-        // Simular to Utilla, you really only gotta patch GetGamemode() to make GMUtils work.
-        PatchManager.ApplyPatch(
-            typeof(GorillaLibrary.Utilities.GameModeUtility), nameof(GorillaLibrary.Utilities.GameModeUtility.GetGameMode),
-            prefix: PatchManager.GetMethodInfo(GetGameModePrefix)
-        );
-
-        // Hook onto Utilla version checker
-        PatchManager.ApplyPatch(
-            typeof(VersionCheckManager), nameof(VersionCheckManager.Start),
-            postfix: PatchManager.GetMethodInfo(VersionCheckManagerStartPatch)
-        );
-    }
-
-    // GorillaLibrary/Plugin.cs
-    static bool AwakePrefix(GorillaLibrary.Plugin __instance)
-    {
-        GLInstance = __instance;
-
-        GorillaLibrary.Plugin.Instance = __instance;
-        GorillaLibrary.Plugin.Logger = Logger.CreateLogSource("GorillaLibrary/Translatilla");
-
-        RuntimeHelpers.RunClassConstructor(typeof(GorillaLibrary.Events).TypeHandle);
-
-/*
-        MothershipClientApiUnity.OnMessageNotificationSocket += 
-            (notif, _) => GorillaLibrary.Events.Server.OnMothershipMessageRecieved.Invoke(notif.Title, notif.Body);
-*/
-
-        Assembly gtAssembly = typeof(GorillaGameManager).Assembly;
-        Type gtModeSerializeType = gtAssembly.GetType("GameModeSerializer");
-
-        if (gtModeSerializeType != null)
-        {
-            Harmony glibHarmony = new Harmony("translatilla." + __instance.Info.Metadata.GUID);
-
-            // If it ain't broke don't reformat it
-            glibHarmony.Patch(AccessTools.Method(gtModeSerializeType, "BroadcastTag", parameters: [typeof(NetPlayer), typeof(NetPlayer), typeof(PhotonMessageInfo)]), postfix: new(AccessTools.Method(typeof(GameManagerPatches), nameof(GameManagerPatches.ClientTagPatch))));
-            glibHarmony.Patch(AccessTools.Method(gtModeSerializeType, "BroadcastRoundComplete", parameters: [typeof(PhotonMessageInfoWrapped)]), postfix: new(AccessTools.Method(typeof(GameManagerPatches), nameof(GameManagerPatches.ClientRoundCompletePatch))));
-        }
-
-        return false;
-    }
-
-    static void OnGameInitializedFinalizer()
-    {
-        Plugin.GorillaLibraryGameObject = GLInstance.sharedObject;
-        Plugin.GorillaLibraryGameObject.name = $"GorillaLibrary/Translatilla {GLInstance.Info.Metadata.Version}";
-    }
-
-    // GorillaLibrary/Utilities/GameModeUtility.cs
-    static bool GetGameModePrefix(Func<GameModeWrapper, bool> predicate, ref GameModeWrapper __result)
-    {
-        var gmWrapperResult = Utilla.Utils.GameModeUtils.GetGamemode(gm =>
-        {
-            var glGamemode = new GameModeWrapper(
-                gm.ID,
-                gm.DisplayName,
-                gm.BaseGamemode
-            );
-
-            return predicate(glGamemode);
-        });
-
-        if (gmWrapperResult is null)
-        {
-            __result = null!;
-            return false;
-        }
-
-        var glGamemode = new GameModeWrapper(
-            gmWrapperResult.ID,
-            gmWrapperResult.DisplayName,
-            gmWrapperResult.BaseGamemode
-        );
-
-        __result = glGamemode;
-
-        return false;
+        PatchManager.ApplyPatch(typeof(GameModeManager), nameof(GameModeManager.Awake),
+            prefix: PatchManager.GetMethodInfo(GameModeManagerAwakePatch));
+        PatchManager.ApplyPatch(typeof(GamemodeManager), "GetPluginInfos",
+            postfix: PatchManager.GetMethodInfo(GetPluginInfosPostfix));
+        PatchManager.ApplyPatch(typeof(GamemodeManager), nameof(GamemodeManager.Awake),
+            postfix: PatchManager.GetMethodInfo(GamemodeManagerAwakePostfix));
+        PatchManager.ApplyPatch(typeof(GorillaLibrary.Utilities.GameModeUtility), nameof(GorillaLibrary.Utilities.GameModeUtility.GetGameMode),
+            prefix: PatchManager.GetMethodInfo(GetGameModePrefix));
+        PatchManager.ApplyPatch(typeof(GorillaLibrary.Utilities.GameModeUtility), nameof(GorillaLibrary.Utilities.GameModeUtility.FindGameModeInString),
+            prefix: PatchManager.GetMethodInfo(FindGameModeInStringPrefix));
+        PatchManager.ApplyPatch(typeof(VersionCheckManager), nameof(VersionCheckManager.Start),
+            postfix: PatchManager.GetMethodInfo(VersionCheckManagerStartPatch));
     }
 
     // GorillaLibrary/Behaviours/GameModeManager.cs
     static bool GameModeManagerAwakePatch(GameModeManager __instance)
     {
-        // This is almost a 1:1 copy of the simularly named method in UtillaPatches.cs
-
-        GameModeManager.Instance = __instance;
-
-        // Translating game modes is simular to Utilla. They are the same codebase after all.
-        // Even both the gameobjects are named "Utilla Custom Game Modes"
-
-        // Utilla conveniently has a helper function for getting our plugin infos
-        List<GorillaLibrary.PluginInfo> gorillaLibraryPluginInfos = __instance.GetPluginInfos();
-        List<Utilla.PluginInfo> utillaPluginInfos = new();
-
-        List<Gamemode> gamemodes = new();
-
-        Gamemode CreateGameMode(GameModeWrapper glGamemode) =>
-            new Gamemode(glGamemode.ID, glGamemode.DisplayName, glGamemode.GameManager.GetType());
-
-        // Get gamemodes via GL for conversion
-        foreach (var pluginInfo in gorillaLibraryPluginInfos)
+        if (GameModeManager.HasInstance && GameModeManager.Instance != __instance)
         {
-            Gamemode[] ourGamemodes = pluginInfo.Gamemodes.Select(g => CreateGameMode(g)).ToArray();
-            
-            var utillaPluginInfo = new Utilla.PluginInfo
-            {
-                Gamemodes = ourGamemodes,
-                Plugin = pluginInfo.Plugin,
-                // None of the gamemode events take namespace-specific types, they take strings so no translation required
-                OnGamemodeJoin = pluginInfo.OnGamemodeJoin,
-                OnGamemodeLeave = pluginInfo.OnGamemodeLeave
-            };
-
-            gamemodes.AddRange(ourGamemodes);
-            utillaPluginInfos.Add(utillaPluginInfo);
+            UnityEngine.Object.Destroy(__instance);
+            return false;
         }
 
-        GamemodeManager gmmInstance = GamemodeManager.Instance;
+        GameModeManager.Instance = __instance;
+        Plugin.GorillaLibraryGameObject = __instance.gameObject;
 
-        // Now just inject them into Utilla's gamemode mgr
-        gmmInstance.Gamemodes.AddRange(gamemodes);
-        gamemodes.ForEach(gmmInstance.AddGamemodeToPrefabPool);
+        __instance.Gamemodes = new();
+        __instance.ModdedGamemodes = new();
+        __instance.CustomGameModes = new();
+        __instance.pluginInfos = new();
 
-        // properly insert our pluginInfos just in case
-        gmmInstance.pluginInfos.AddRange(utillaPluginInfos);
-
-        Plugin.Logger.Log($"Added {gamemodes.Count} gamemodes to Utilla game selector");
-
-        // We don't need to kill the network controller since it's room update events are completely
-        // harmless and rely on NetworkSystem. It also updates GameModeUtils but mostly irrelevant since it's
-        // already patched.
-        // 
-        // Sorta redundant to let you know that the patches don't do something but felt like it'd be useful
-        // to mention since a name like "UtillaNetworkController" implies that it is controlling networking
-        // operations.
-
-        Plugin.Logger.LogMessage($"GorillaLibrary {GLInstance.Info.Metadata.Version} should be patched and ready to work with Utilla.");
-        Plugin.Logger.LogMessage($"If any crashes, bugs, or issues occur with either library, please fill out an issue on GitHub:");
-        Plugin.Logger.LogMessage($"https://github.com/sirkingbinx/Translatilla");
-
+        GamemodeManagerAwakePostfix();
         return false;
     }
 
-    // GorillaLibrary/Behaviours/ConductBoardManager.cs
+    static void GetPluginInfosPostfix(GamemodeManager __instance, ref List<Utilla.PluginInfo> __result)
+    {
+        var moddedGamemodes = __instance.ModdedGamemodes.Select(GameModeBridge.ToGorillaLibrary).ToArray();
+        var infos = GameModeBridge.GetPluginInfos<GorillaLibrary.Attributes.ModdedGamemodeAttribute, GameModeWrapper>(
+            attribute => attribute.gamemode, moddedGamemodes,
+            typeof(GorillaLibrary.Attributes.ModdedGamemodeJoinAttribute), typeof(GorillaLibrary.Attributes.ModdedGamemodeLeaveAttribute));
+
+        foreach (var info in infos)
+        {
+            __result.Add(new Utilla.PluginInfo
+            {
+                Plugin = info.Plugin,
+                Gamemodes = info.Gamemodes.Select(GameModeBridge.ToUtilla).ToArray(),
+                OnGamemodeJoin = info.OnGamemodeJoin,
+                OnGamemodeLeave = info.OnGamemodeLeave
+            });
+        }
+
+        GameModeBridge.Canonicalize(__result, __instance.ModdedGamemodes);
+    }
+
+    static void GamemodeManagerAwakePostfix()
+    {
+        if (!GameModeManager.HasInstance || !GamemodeManager.Initialization.Task.IsCompleted)
+            return;
+
+        var utillaGamemodes = GamemodeManager.Instance;
+        var glGamemodes = GameModeManager.Instance;
+
+        glGamemodes.Gamemodes = utillaGamemodes.Gamemodes.Select(GameModeBridge.ToGorillaLibrary).ToList();
+        glGamemodes.ModdedGamemodes = utillaGamemodes.ModdedGamemodes.Select(GameModeBridge.ToGorillaLibrary).ToList();
+        glGamemodes.CustomGameModes = utillaGamemodes.CustomGameModes.Select(GameModeBridge.ToGorillaLibrary).ToList();
+        
+        foreach (var mode in utillaGamemodes.DefaultGameModesPerMode)
+            glGamemodes.DefaultGameModesPerMode[mode.Key] = GameModeBridge.ToGorillaLibrary(mode.Value);
+        foreach (var mode in utillaGamemodes.ModdedGamemodesPerMode)
+            glGamemodes.ModdedGamemodesPerMode[mode.Key] = GameModeBridge.ToGorillaLibrary(mode.Value);
+
+        GameModeManager.Initialization.TrySetResult(glGamemodes);
+    }
+
+    static bool GetGameModePrefix(Func<GameModeWrapper, bool> predicate, ref GameModeWrapper __result)
+    {
+        var result = Utilla.Utils.GameModeUtils.GetGamemode(mode => predicate(GameModeBridge.ToGorillaLibrary(mode)));
+        __result = result is null ? null! : GameModeBridge.ToGorillaLibrary(result);
+        return false;
+    }
+
+    static bool FindGameModeInStringPrefix(string gmString, ref GameModeWrapper __result)
+    {
+        var result = Utilla.Utils.GameModeUtils.FindGamemodeInString(gmString);
+        __result = result is null ? null! : GameModeBridge.ToGorillaLibrary(result);
+        return false;
+    }
+
+    // Photon can send a room update before GL has recorded its first room
+    static bool OnRoomPropertiesUpdatePrefix(NetworkController __instance)
+    {
+        if (ApplicationQuittingState.IsQuitting || NetworkSystem.Instance == null || !NetworkSystem.Instance.InRoom)
+            return false;
+
+        if (__instance.lastRoom is null)
+        {
+            __instance.OnJoinedRoom();
+            return false;
+        }
+
+        return true;
+    }
+
     static void VersionCheckManagerStartPatch(VersionCheckManager __instance)
     {
+        if (__instance.footerText == null)
+            return;
+
         __instance.footerText.text += $" <color=grey>/ Translatilla {PluginInfo.Version}</color>";
     }
 }

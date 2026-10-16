@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using Mono.Cecil;
 using System;
 using System.Collections.Generic;
@@ -8,57 +8,82 @@ using System.Linq;
 namespace Translatilla.Patcher;
 
 /*
- * What this does:
- * 
- * GorillaLibrary declares Utilla as an incompatability and refuses to load it at all. This will strip that
- * incompatability attribute from all types in the assembly for both Utilla and GorillaLibrary since
- * Translatilla forces them to load together.
- * 
- * Only removing the incompatability instead of mimicking all of the class names allows multiple things
- * to keep flowing smoothly on both:
- * 
- * - Non-modded calls: You can still access GorillaLibrary's other features if your master library is
- *                     Utilla.
- * - Assembly loading: Assemblies that check to make sure that GorillaLibrary's GUID is loaded still
- *                     operate as normal.
- * - Smaller footprint: The removed extra bloatware make Translatilla easier to maintain.
+ * GorillaLibrary declares Utilla as an incompatability. Remove just that incompatability (and the
+ * reverse, if present) before BepInEx discovers plugins, so both libraries can load together.
+ *
+ * BepInEx only supplies game assemblies to Patch(), so plugin assemblies are handled in Initialize().
  */
-
 public static class Patcher
 {
     public static IEnumerable<string> TargetDLLs { get; } = new string[0];
 
     public static void Initialize()
     {
-        string[] filePaths = Directory.GetFiles(Paths.PluginPath, "*.dll", SearchOption.AllDirectories);
-        foreach (string filepath in filePaths)
+        if (!Directory.Exists(Paths.PluginPath))
+            return;
+
+        using var resolver = new DefaultAssemblyResolver();
+        resolver.AddSearchDirectory(Paths.BepInExAssemblyDirectory);
+        resolver.AddSearchDirectory(Paths.ManagedPath);
+
+        foreach (string directory in Directory.GetDirectories(Paths.PluginPath, "*", SearchOption.AllDirectories))
+            resolver.AddSearchDirectory(directory);
+
+        resolver.AddSearchDirectory(Paths.PluginPath);
+
+        foreach (string filepath in Directory.GetFiles(Paths.PluginPath, "*.dll", SearchOption.AllDirectories))
         {
-            using var assembly = AssemblyDefinition.ReadAssembly(filepath, new ReaderParameters { ReadWrite = true });
-
-            var mainModule = assembly.MainModule;
-
-            string[] allowedToPatch = { "GorillaLibrary", "Utilla" };
-
-            if (!allowedToPatch.Contains(assembly.Name.Name))
-                continue;
-
-            Console.WriteLine("[Translatilla.Patcher] Patching " + assembly.Name.Name);
-
-            foreach (var type in mainModule.Types)
+            string temporaryPath = filepath + ".translatilla.tmp";
+            try
             {
-                var attributesToRemove = type.CustomAttributes
-                    .Where(attr => attr.AttributeType.Name == "BepInIncompatibility")
-                    .ToList();
-                foreach (var attr in attributesToRemove)
-                {
-                    type.CustomAttributes.Remove(attr);
-                }
-            }
+                using var stream = new MemoryStream(File.ReadAllBytes(filepath));
+                using var assembly = AssemblyDefinition.ReadAssembly(stream, new ReaderParameters { AssemblyResolver = resolver });
+                if (assembly.Name.Name != "GorillaLibrary" && assembly.Name.Name != "Utilla")
+                    continue;
 
-            assembly.Write();
+                int attributeCount = assembly.MainModule.GetTypes().Sum(type => type.CustomAttributes.Count);
+                Patch(assembly);
+                
+                if (attributeCount == assembly.MainModule.GetTypes().Sum(type => type.CustomAttributes.Count))
+                    continue;
+
+                assembly.Write(temporaryPath);
+                File.Replace(temporaryPath, filepath, null);
+                Console.WriteLine("[Translatilla.Patcher] Patched " + filepath);
+            }
+            catch (BadImageFormatException)
+            { }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[Translatilla.Patcher] Could not patch " + filepath + ": " + ex);
+            }
+            finally
+            {
+                if (File.Exists(temporaryPath))
+                    File.Delete(temporaryPath);
+            }
         }
     }
-    
-    // Dummy method, we don't patch like this
-    public static void Patch(AssemblyDefinition assembly) { }
+
+    public static void Patch(AssemblyDefinition assembly)
+    {
+        string otherGuid;
+        if (assembly.Name.Name == "GorillaLibrary")
+            otherGuid = "org.legoandmars.gorillatag.utilla";
+        else if (assembly.Name.Name == "Utilla")
+            otherGuid = "dev.gorillalibrary";
+        else
+            return;
+
+        foreach (var type in assembly.MainModule.GetTypes())
+        {
+            var attributesToRemove = type.CustomAttributes.Where(attribute =>
+                attribute.AttributeType.FullName == "BepInEx.BepInIncompatibility" &&
+                attribute.ConstructorArguments.Count == 1 &&
+                attribute.ConstructorArguments[0].Value is string guid && guid == otherGuid).ToList();
+
+            foreach (var attribute in attributesToRemove)
+                type.CustomAttributes.Remove(attribute);
+        }
+    }
 }
