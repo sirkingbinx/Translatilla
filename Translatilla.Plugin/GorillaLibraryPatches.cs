@@ -142,8 +142,8 @@ public static class GorillaLibraryPatches
             return;
 
         if (__instance.footerText.text.Contains("<color=red>"))
-            __instance.footerText.text += $"<color=red>TRANSLATILLA {PluginInfo.Version}</color> <color=grey>(U:{PluginInfo.UtillaVersion} / GL:{PluginInfo.GLVersion})</color>";
+            __instance.footerText.text = $"<color=red>TRANSLATILLA {PluginInfo.Version}</color> <color=grey>(U:{PluginInfo.UtillaVersion} / GL:{PluginInfo.GLVersion})</color>";
         else
-            __instance.footerText.text += $"TRANSLATILLA {PluginInfo.Version} <color=grey>(U:{PluginInfo.UtillaVersion} / GL:{PluginInfo.GLVersion})</color>";
+            __instance.footerText.text = $"TRANSLATILLA {PluginInfo.Version} <color=grey>(U:{PluginInfo.UtillaVersion} / GL:{PluginInfo.GLVersion})</color>";
     }
 }
