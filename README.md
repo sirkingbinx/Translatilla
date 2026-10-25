@@ -3,6 +3,10 @@
     <h1>Translatilla</h1>
 </div>
 
+> [!NOTE]
+> As of merging [GorillaLibrary #13](https://github.com/GorillaTagModdingHub/GorillaLibrary/pull/13), GorillaLibrary now natively supports translating Utilla gamemodes into its own game mode manager, ending the need for a translation mod. It lasted a good week or so.
+> To use Translatilla in the future, just install GorillaLibrary and it will automatically handle the translation.
+
 Translatilla is a Gorilla Tag mod that heavily modifies [Utilla](https://github.com/sirkingbinx/Utilla) and [GorillaLibrary](https://github.com/GorillaTagModdingHub/GorillaLibrary) at runtime to get them to work together to implement modded lobby support. In practice, it allows you to use GorillaLibrary mods on Utilla and vice versa by translating their code into types that your chosen library can understand (hence the name Translatilla).
 
 Utilla or GorillaLibrary is declared as a "master library". The master library is the library that handles modded lobby functionality, and calls from the other library are translated to your master library and back in order to force compatability between both libraries without any compromises.
